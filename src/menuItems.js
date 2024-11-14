@@ -25,6 +25,11 @@ const menuItems = [
         allowedGroups: ["admin", "staff"],
       },
       {
+        key: "/customer-management/customer-generator", // 가상 고객 추가
+        label: "가상 고객 추가",
+        allowedGroups: ["admin", "staff"],
+      },
+      {
         key: "/customer-management/customer-list", // 고객 리스트
         label: "고객 리스트",
         allowedGroups: ["admin", "staff", "user"],

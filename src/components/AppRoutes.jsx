@@ -16,6 +16,7 @@ import ChangeCancel from "../components/reservation/ChangeCancel";
 import StatisticsManagement from "../pages/StatisticsManagement";
 import AdminPage from "../pages/AdminPage";
 import CustomerNew from "../pages/customer/CustomerNew";
+import CustomerGenerator from "../pages/customer/CustomerGenerator";
 
 const AppRoutes = () => (
   <Routes>
@@ -25,6 +26,7 @@ const AppRoutes = () => (
     {/* 고객 관리 */}
     <Route path="/customer-management">
       <Route path="customer-new" element={<CustomerNew />} />
+      <Route path="customer-generator" element={<CustomerGenerator />} />
       <Route path="customer-list" element={<CustomerManagement />} />
     </Route>
 

@@ -17,12 +17,22 @@ import {
 import { db } from "../services/firebase";
 
 export function useFirestoreQuery() {
-  const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [lastVisible, setLastVisible] = useState(null);
 
-  // 데이터 가져오기 함수 (페이징 및 실시간 구독 지원)
+  // 전체 문서 수 가져오기
+  async function getDocumentCount(collectionName) {
+    try {
+      const querySnapshot = await getDocs(collection(db, collectionName));
+      return querySnapshot.size;
+    } catch (error) {
+      console.error("Error fetching document count:", error);
+      setError(error);
+      return 0;
+    }
+  }
+
+  // 데이터 가져오기 함수
   async function getDocuments(
     collectionName,
     callback = null,
@@ -32,81 +42,74 @@ export function useFirestoreQuery() {
       orderByDirection = "asc",
       limitNumber = 0,
       page = 1,
-      realTime = false,
     } = {}
   ) {
     setLoading(true);
     setError(null);
 
-    let q = collection(db, collectionName);
+    try {
+      let baseQuery = collection(db, collectionName);
+      let queryConstraints = [];
 
-    // 조건 추가
-    conditions.forEach((condition) => {
-      q = query(q, where(...condition));
-    });
+      // 조건 추가
+      conditions.forEach((condition) => {
+        queryConstraints.push(where(...condition));
+      });
 
-    // 정렬 및 제한 추가
-    if (orderByField) q = query(q, orderBy(orderByField, orderByDirection));
-    if (limitNumber) q = query(q, limit(limitNumber));
-
-    // 페이지 시작점을 계산하여 startAfter 적용
-    if (page > 1) {
-      const offset = (page - 1) * limitNumber;
-      // Firestore의 startAfter는 문서 기준이므로, offset에 맞게 문서를 가져온 후 설정합니다.
-      const snapshot = await getDocs(query(q, limit(offset)));
-      if (snapshot.docs.length > 0) {
-        q = query(q, startAfter(snapshot.docs[snapshot.docs.length - 1]));
+      // 정렬 추가
+      if (orderByField) {
+        queryConstraints.push(orderBy(orderByField, orderByDirection));
       }
-    }
 
-    // 실시간 구독 또는 단발성 쿼리 실행
-    if (realTime) {
-      const unsubscribe = onSnapshot(
-        q,
-        (snapshot) => {
-          const documents = snapshot.docs.map((doc) => ({
-            id: doc.id,
-            ...doc.data(),
-          }));
-          setData(documents);
-          setLastVisible(snapshot.docs[snapshot.docs.length - 1]);
-          if (callback) callback(documents);
-          setLoading(false);
-        },
-        (error) => {
-          console.error(error);
-          setError(error);
-          setLoading(false);
-        }
-      );
+      // 페이지네이션을 위한 쿼리 구성
+      if (page > 1 && limitNumber > 0) {
+        // 이전 페이지의 마지막 문서를 가져오기
+        const previousPageQuery = query(
+          baseQuery,
+          ...queryConstraints,
+          limit((page - 1) * limitNumber)
+        );
+        const previousPageSnapshot = await getDocs(previousPageQuery);
+        const lastVisible =
+          previousPageSnapshot.docs[previousPageSnapshot.docs.length - 1];
 
-      // 컴포넌트 언마운트 시 구독 해제
-      return unsubscribe;
-    } else {
-      try {
-        const querySnapshot = await getDocs(q);
-        const documents = querySnapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        }));
-        setData(documents);
-        setLastVisible(querySnapshot.docs[querySnapshot.docs.length - 1]);
-        if (callback) callback(documents);
-      } catch (error) {
-        console.error(error);
-        setError(error);
-      } finally {
-        setLoading(false);
+        // 현재 페이지 쿼리에 startAfter 추가
+        queryConstraints.push(startAfter(lastVisible));
       }
+
+      // 페이지 크기 제한 추가
+      if (limitNumber > 0) {
+        queryConstraints.push(limit(limitNumber));
+      }
+
+      // 최종 쿼리 실행
+      const finalQuery = query(baseQuery, ...queryConstraints);
+      const querySnapshot = await getDocs(finalQuery);
+
+      const documents = querySnapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+
+      if (callback) {
+        callback(documents);
+      }
+
+      return documents;
+    } catch (error) {
+      console.error("Error in getDocuments:", error);
+      setError(error);
+      throw error;
+    } finally {
+      setLoading(false);
     }
   }
 
   return {
-    data,
     loading,
     error,
     getDocuments,
-    lastVisible,
+    getDocumentCount,
   };
 }
 

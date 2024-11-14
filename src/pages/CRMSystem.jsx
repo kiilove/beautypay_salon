@@ -32,7 +32,7 @@ const CRMSystem = ({ userGroup }) => {
   return (
     <Layout className="min-h-screen">
       <Header />
-      <Content className="p-4 bg-white">
+      <Content className="p-4 bg-white ">
         <AppRoutes />
       </Content>
     </Layout>

@@ -23,30 +23,30 @@ const { Option } = Select;
 const CustomerNew = () => {
   const [form] = Form.useForm();
   const navigate = useNavigate();
-  const { addData, loading, error } = useFirestoreAddData(); // 훅 사용
+  const { addData, loading, error } = useFirestoreAddData();
 
   // 새 고객 추가 로직
   const onFinish = (values) => {
-    // 선택값이 비어있다면 공란 처리
     const formattedValues = {
       ...values,
-      name: encryptData(values.name) || "", // 이름 암호화 후 공란 처리
-      phone: encryptData(values.phone) || "", // 연락처 암호화 후 공란 처리
-      email: values.email ? encryptData(values.email) : "", // 이메일이 있으면 암호화 후 공란 처리
-      address: values.address ? encryptData(values.address) : "", // 주소가 있으면 암호화 후 공란 처리
-      notes: values.notes || "", // 공란 처리
-      customerPhoto: values.customerPhoto || "", // 공란 처리
-      allergies: values.allergies || "", // 공란 처리
-      preferredHairStyle: values.preferredHairStyle || "", // 공란 처리
-      skinType: values.skinType || "", // 공란 처리
-      createdAt: dayjs().format("YYYY-MM-DD HH:mm:ss"), // 현재 날짜 저장
+      name: encryptData(values.name) || "",
+      phone: encryptData(values.phone) || "",
+      email: values.email ? encryptData(values.email) : "",
+      address: values.address ? encryptData(values.address) : "",
+      gender: values.gender || "여성", // 기본값을 여성으로 설정
+      notes: values.notes || "",
+      customerPhoto: values.customerPhoto || "",
+      allergies: values.allergies || "",
+      preferredHairStyle: values.preferredHairStyle || "",
+      skinType: values.skinType || "",
+      createdAt: dayjs().format("YYYY-MM-DD HH:mm:ss"),
     };
 
     // 고객 데이터를 Firestore에 저장
     addData("customers", formattedValues, (response) => {
       if (response) {
         message.success("새 고객이 추가되었습니다.");
-        navigate("/customer-management/customer-list"); // 고객 리스트 페이지로 이동
+        navigate("/customer-management/customer-list");
       } else {
         message.error("고객 추가 실패!");
       }
@@ -71,10 +71,9 @@ const CustomerNew = () => {
         onFinish={onFinish}
         layout="vertical"
         initialValues={{
-          remember: true,
+          gender: "여성", // 성별 기본값을 여성으로 설정
         }}
       >
-        {/* 탭을 사용하여 기본정보와 부가정보를 구분 */}
         <Tabs
           defaultActiveKey="1"
           tabPosition="top"
@@ -90,6 +89,18 @@ const CustomerNew = () => {
                 ]}
               >
                 <Input placeholder="고객 이름" />
+              </Form.Item>
+
+              <Form.Item
+                label="성별"
+                name="gender"
+                rules={[{ required: true, message: "성별을 선택해주세요!" }]}
+              >
+                <Select placeholder="성별 선택">
+                  <Option value="여성">여성</Option>
+                  <Option value="남성">남성</Option>
+                  <Option value="기타">기타</Option>
+                </Select>
               </Form.Item>
 
               <Form.Item
@@ -148,7 +159,6 @@ const CustomerNew = () => {
           </TabPane>
         </Tabs>
 
-        {/* 고객 추가 버튼 */}
         <Form.Item className="text-center">
           <Button type="primary" htmlType="submit" className="w-full py-3">
             고객 추가

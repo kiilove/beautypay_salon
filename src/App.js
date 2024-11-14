@@ -7,9 +7,30 @@ import {
 } from "react-router-dom";
 import CRMSystem from "./pages/CRMSystem";
 import CustomerDetails from "./pages/CustomerDetails";
-import { ThemeProvider } from "./context/ThemeContext";
+import { ThemeProvider, useTheme } from "./context/ThemeContext";
 import { DeviceProvider } from "./context/DeviceContext";
-import { AuthProvider } from "./context/AuthContext"; // AuthProvider 사용
+import { AuthProvider } from "./context/AuthContext";
+
+const AppContent = () => {
+  const { isDarkTheme } = useTheme();
+
+  return (
+    <div className={isDarkTheme ? "dark" : ""}>
+      <div className="min-h-screen bg-white text-black dark:bg-gray-900 dark:text-white">
+        <Router>
+          <Routes>
+            <Route path="/" element={<Navigate to="/beautypay-salon" />} />
+            <Route path="/*" element={<CRMSystem />} />
+            <Route
+              path="/customer-management/details/:id"
+              element={<CustomerDetails />}
+            />
+          </Routes>
+        </Router>
+      </div>
+    </div>
+  );
+};
 
 const App = () => {
   sessionStorage.setItem("userGroup", "admin");
@@ -18,17 +39,7 @@ const App = () => {
     <AuthProvider>
       <ThemeProvider>
         <DeviceProvider>
-          <Router>
-            <Routes>
-              <Route path="/" element={<Navigate to="/beautypay-salon" />} />
-              <Route path="/*" element={<CRMSystem />} />
-              {/* CustomerDetails 라우트 설정 추가 */}
-              <Route
-                path="/customer-management/details/:id"
-                element={<CustomerDetails />}
-              />
-            </Routes>
-          </Router>
+          <AppContent />
         </DeviceProvider>
       </ThemeProvider>
     </AuthProvider>
