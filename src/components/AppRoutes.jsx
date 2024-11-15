@@ -17,11 +17,22 @@ import StatisticsManagement from "../pages/StatisticsManagement";
 import AdminPage from "../pages/AdminPage";
 import CustomerNew from "../pages/customer/CustomerNew";
 import CustomerGenerator from "../pages/customer/CustomerGenerator";
+import SalonInfo from "../pages/salon/SalonInfo";
+import Signup from "../pages/Signup";
+import Login from "../pages/Login";
+import StaffNew from "../pages/staff/StaffNew";
 
 const AppRoutes = () => (
   <Routes>
     {/* 메인 페이지 */}
     <Route path="/beautypay-salon" element={<BeautyPaySalon />} />
+
+    {/* 매장 관리 */}
+    <Route path="/salon-management">
+      <Route path="salon-info" element={<SalonInfo />} />
+      <Route path="staff-management" element={<CustomerGenerator />} />
+      <Route path="staff-new" element={<StaffNew />} />
+    </Route>
 
     {/* 고객 관리 */}
     <Route path="/customer-management">

@@ -17,8 +17,9 @@ import {
 import { db } from "../services/firebase";
 
 export function useFirestoreQuery() {
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [lastVisibleDoc, setLastVisibleDoc] = useState(null); // 마지막 문서 저장 상태
 
   // 전체 문서 수 가져오기
   async function getDocumentCount(collectionName) {
@@ -32,16 +33,17 @@ export function useFirestoreQuery() {
     }
   }
 
-  // 데이터 가져오기 함수
+  // 데이터 가져오기 함수 (with realtime support and cursor-based pagination)
   async function getDocuments(
     collectionName,
     callback = null,
     {
       conditions = [],
+      limitNumber = 0,
       orderByField = "",
       orderByDirection = "asc",
-      limitNumber = 0,
-      page = 1,
+      realtime = false,
+      lastVisible = null, // 추가된 커서 매개변수
     } = {}
   ) {
     setLoading(true);
@@ -61,20 +63,9 @@ export function useFirestoreQuery() {
         queryConstraints.push(orderBy(orderByField, orderByDirection));
       }
 
-      // 페이지네이션을 위한 쿼리 구성
-      if (page > 1 && limitNumber > 0) {
-        // 이전 페이지의 마지막 문서를 가져오기
-        const previousPageQuery = query(
-          baseQuery,
-          ...queryConstraints,
-          limit((page - 1) * limitNumber)
-        );
-        const previousPageSnapshot = await getDocs(previousPageQuery);
-        const lastVisible =
-          previousPageSnapshot.docs[previousPageSnapshot.docs.length - 1];
-
-        // 현재 페이지 쿼리에 startAfter 추가
-        queryConstraints.push(startAfter(lastVisible));
+      // 커서 추가
+      if (lastVisible) {
+        queryConstraints.push(startAfter(lastVisible)); // 이전 페이지의 마지막 문서 다음부터 시작
       }
 
       // 페이지 크기 제한 추가
@@ -82,20 +73,48 @@ export function useFirestoreQuery() {
         queryConstraints.push(limit(limitNumber));
       }
 
-      // 최종 쿼리 실행
+      // 최종 쿼리 생성
       const finalQuery = query(baseQuery, ...queryConstraints);
-      const querySnapshot = await getDocs(finalQuery);
 
-      const documents = querySnapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
+      if (realtime) {
+        // 실시간 데이터 처리
+        const unsubscribe = onSnapshot(finalQuery, (querySnapshot) => {
+          const documents = querySnapshot.docs.map((doc) => ({
+            id: doc.id,
+            ...doc.data(),
+          }));
 
-      if (callback) {
-        callback(documents);
+          if (callback) {
+            callback(documents);
+          }
+
+          // 마지막 문서 저장
+          const lastVisibleDoc =
+            querySnapshot.docs[querySnapshot.docs.length - 1];
+          setLastVisibleDoc(lastVisibleDoc);
+        });
+
+        // 구독 해제를 반환하여 나중에 cleanup 가능
+        return unsubscribe;
+      } else {
+        // 정적 데이터 가져오기
+        const querySnapshot = await getDocs(finalQuery);
+        const documents = querySnapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
+
+        // 마지막 문서 저장
+        const lastVisibleDoc =
+          querySnapshot.docs[querySnapshot.docs.length - 1];
+        setLastVisibleDoc(lastVisibleDoc);
+
+        if (callback) {
+          callback(documents);
+        }
+
+        return documents;
       }
-
-      return documents;
     } catch (error) {
       console.error("Error in getDocuments:", error);
       setError(error);
@@ -110,6 +129,8 @@ export function useFirestoreQuery() {
     error,
     getDocuments,
     getDocumentCount,
+    lastVisibleDoc, // 마지막 문서 상태 반환
+    resetCursor: () => setLastVisibleDoc(null), // 커서 초기화 함수
   };
 }
 

@@ -1,13 +1,13 @@
-import React, { useState, useEffect, useRef } from "react";
-import { Input, Table, Modal, Tabs, Card } from "antd";
-import { Avatar, Checkbox } from "antd";
+import React, { useState, useEffect } from "react";
+import { Input, Table, Modal, Tabs, Card, Pagination, Checkbox } from "antd";
+import { Avatar } from "antd";
 import { useNavigate } from "react-router-dom";
 import { useDevice } from "../context/DeviceContext";
 import { useFirestoreQuery } from "../hooks/useFirestore";
 import { decryptData } from "../services/encryptionUtils";
 import formatPhoneNumber from "../utils/formatPhoneNumber";
-import { CloseOutlined } from "@ant-design/icons";
 import highlightText from "../utils/highlightText";
+import { CloseOutlined } from "@ant-design/icons";
 
 const { Search } = Input;
 const { TabPane } = Tabs;
@@ -20,18 +20,21 @@ const CustomerManagement = () => {
   const [totalCustomers, setTotalCustomers] = useState(0);
   const [selectedCustomer, setSelectedCustomer] = useState(null);
   const [isModalVisible, setIsModalVisible] = useState(false);
+  const [selectedRowKeys, setSelectedRowKeys] = useState([]); // 선택된 행
   const { isMobile } = useDevice();
   const navigate = useNavigate();
-  const listRef = useRef(null);
 
-  const { getDocuments, getDocumentCount, loading } = useFirestoreQuery();
+  const { getDocuments, getDocumentCount, loading, lastVisibleDoc } =
+    useFirestoreQuery();
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 20;
 
   useEffect(() => {
     const fetchTotalCustomers = async () => {
       try {
-        const total = await getDocumentCount("customers");
+        const total = await getDocumentCount(
+          "salons/Oc2MGp4nUw4q0nxHmWdM/customers"
+        );
         setTotalCustomers(total);
       } catch (error) {
         console.error("Error fetching total customers:", error);
@@ -41,42 +44,47 @@ const CustomerManagement = () => {
     fetchTotalCustomers();
   }, []);
 
+  const fetchPagingData = async () => {
+    try {
+      // 현재 페이지에서 가져올 데이터 수 계산
+      const remainingRecords = totalCustomers - (currentPage - 1) * pageSize;
+      const currentLimit = Math.min(pageSize, remainingRecords); // 남은 데이터 수만큼 가져오기
+
+      await getDocuments(
+        "salons/Oc2MGp4nUw4q0nxHmWdM/customers",
+        (pagingData) => {
+          if (!pagingData || pagingData.length === 0) {
+            setDisplayData([]);
+            return;
+          }
+
+          const decryptedData = pagingData.map((customer, index) => ({
+            ...customer,
+            key: customer.id || `customer-${index}`,
+            name: decryptData(customer.name),
+            phone: decryptData(customer.phone),
+            email: decryptData(customer.email),
+            address: decryptData(customer.address),
+          }));
+
+          setDisplayData(decryptedData); // 현재 페이지 데이터 덮어쓰기
+        },
+        {
+          orderByField: "createdAt",
+          orderByDirection: "desc",
+          limitNumber: currentLimit, // 동적으로 limit 설정
+          lastVisible: currentPage === 1 ? null : lastVisibleDoc,
+          realtime: false,
+        }
+      );
+    } catch (error) {
+      console.error("Error fetching data:", error);
+    }
+  };
+
   useEffect(() => {
     if (!isSearching) {
-      const fetchData = async () => {
-        try {
-          await getDocuments(
-            "customers",
-            (allData) => {
-              if (!allData || allData.length === 0) {
-                if (currentPage === 1) setDisplayData([]);
-                return;
-              }
-
-              const decryptedData = allData.map((customer, index) => ({
-                ...customer,
-                key: customer.id || `customer-${index}`,
-                name: decryptData(customer.name),
-                phone: decryptData(customer.phone),
-                email: decryptData(customer.email),
-                address: decryptData(customer.address),
-              }));
-
-              setDisplayData((prevData) => [...prevData, ...decryptedData]);
-            },
-            {
-              orderByField: "createdAt",
-              orderByDirection: "asc",
-              limitNumber: pageSize,
-              page: currentPage,
-            }
-          );
-        } catch (error) {
-          console.error("Error fetching data:", error);
-        }
-      };
-
-      fetchData();
+      fetchPagingData();
     }
   }, [currentPage, isSearching]);
 
@@ -92,9 +100,9 @@ const CustomerManagement = () => {
 
     try {
       await getDocuments(
-        "customers",
-        (allData) => {
-          const decryptedData = allData.map((customer) => ({
+        "salons/Oc2MGp4nUw4q0nxHmWdM/customers",
+        (searchResults) => {
+          const decryptedData = searchResults.map((customer) => ({
             ...customer,
             name: decryptData(customer.name),
             phone: decryptData(customer.phone),
@@ -149,24 +157,17 @@ const CustomerManagement = () => {
     setSelectedCustomer(null);
   };
 
-  const handleScroll = () => {
-    if (!listRef.current) return;
-    const { scrollTop, scrollHeight, clientHeight } = listRef.current;
-    if (scrollTop + clientHeight >= scrollHeight - 50 && !loading) {
-      setCurrentPage((prevPage) => prevPage + 1);
+  const handleSelectAll = (checked) => {
+    if (checked) {
+      setSelectedRowKeys(displayData.map((item) => item.key)); // 모든 행 선택
+    } else {
+      setSelectedRowKeys([]); // 선택 해제
     }
   };
 
-  useEffect(() => {
-    if (isMobile && listRef.current) {
-      listRef.current.addEventListener("scroll", handleScroll);
-      return () => listRef.current.removeEventListener("scroll", handleScroll);
-    }
-  }, [isMobile, loading]);
-
   const renderMobileCards = (data) => {
     return (
-      <div ref={listRef} className="flex flex-wrap gap-4 overflow-auto h-full">
+      <div className="flex flex-wrap gap-4">
         {data.map((customer) => (
           <Card
             key={customer.key}
@@ -186,96 +187,38 @@ const CustomerManagement = () => {
                 {!customer.customerPhoto && customer.name.charAt(0)}
               </Avatar>
               <div className="ml-4">
-                <h3 className="text-lg font-bold">{customer.name}</h3>
+                <h3 className="text-lg font-bold">
+                  {isSearching
+                    ? highlightText(customer.name, searchQuery)
+                    : customer.name}
+                </h3>
                 <p className="text-sm text-gray-500">
-                  {formatPhoneNumber(customer.phone)}
+                  {isSearching
+                    ? highlightText(
+                        formatPhoneNumber(customer.phone),
+                        searchQuery
+                      )
+                    : formatPhoneNumber(customer.phone)}
                 </p>
               </div>
             </div>
             <p className="text-sm">
-              <strong>주소:</strong> {customer.address}
+              <strong>주소:</strong>{" "}
+              {isSearching
+                ? highlightText(customer.address, searchQuery)
+                : customer.address}
             </p>
             <p className="text-sm">
-              <strong>이메일:</strong> {customer.email}
+              <strong>이메일:</strong>{" "}
+              {isSearching
+                ? highlightText(customer.email, searchQuery)
+                : customer.email}
             </p>
           </Card>
         ))}
       </div>
     );
   };
-
-  const columns = [
-    {
-      title: "선택",
-      dataIndex: "checkbox",
-      key: "checkbox",
-      render: (_, customer) => <Checkbox />,
-      width: "5%",
-    },
-    {
-      title: "순서",
-      dataIndex: "index",
-      key: "index",
-      render: (_, __, index) => (currentPage - 1) * pageSize + index + 1,
-      width: "5%",
-    },
-    {
-      title: "이름",
-      dataIndex: "name",
-      key: "name",
-      render: (text, record) => (
-        <div className="flex items-center">
-          <Avatar
-            src={record.customerPhoto || undefined}
-            size="large"
-            style={{
-              backgroundColor: record.customerPhoto ? "transparent" : "#f56a00",
-            }}
-          >
-            {!record.customerPhoto && text.charAt(0).toUpperCase()}
-          </Avatar>
-          <span className="ml-2">
-            {isSearching ? highlightText(text, searchQuery) : text}
-          </span>
-        </div>
-      ),
-    },
-    {
-      title: "연락처",
-      dataIndex: "phone",
-      key: "phone",
-      render: (text) => {
-        const formatted = formatPhoneNumber(text);
-        return isSearching ? highlightText(formatted, searchQuery) : formatted;
-      },
-    },
-    {
-      title: "주소",
-      dataIndex: "address",
-      key: "address",
-      render: (text) => {
-        return isSearching ? highlightText(text, searchQuery) : text;
-      },
-    },
-    {
-      title: "이메일",
-      dataIndex: "email",
-      key: "email",
-      render: (text) => (isSearching ? highlightText(text, searchQuery) : text),
-    },
-    {
-      title: "상세 보기",
-      key: "action",
-      render: (_, customer) => (
-        <a
-          onClick={() => handleCustomerClick(customer)}
-          className="text-blue-500"
-        >
-          상세 정보
-        </a>
-      ),
-    },
-  ];
 
   return (
     <div className="p-6 bg-white rounded-lg shadow-md">
@@ -296,9 +239,9 @@ const CustomerManagement = () => {
           enterButton
           size="large"
         />
-        {isSearching && (
+        {searchQuery && (
           <div
-            className="absolute right-20 top-1/2 transform -translate-y-1/2 w-6 h-6 flex items-center justify-center bg-gray-300 rounded-full cursor-pointer"
+            className="absolute right-12 top-1/2 transform -translate-y-1/2 w-6 h-6 flex items-center justify-center bg-gray-300 rounded-full cursor-pointer"
             onClick={resetSearch}
           >
             <CloseOutlined className="text-white text-sm" />
@@ -307,45 +250,81 @@ const CustomerManagement = () => {
       </div>
 
       {isMobile ? (
-        renderMobileCards(isSearching ? searchData : displayData)
+        <>
+          {renderMobileCards(isSearching ? searchData : displayData)}
+          <Pagination
+            current={currentPage}
+            pageSize={pageSize}
+            total={totalCustomers}
+            onChange={(page) => setCurrentPage(page)}
+            className="mt-4 text-center"
+          />
+        </>
       ) : (
         <Table
-          columns={columns}
+          rowSelection={{
+            selectedRowKeys,
+            onChange: setSelectedRowKeys,
+          }}
+          columns={[
+            {
+              title: "번호",
+              dataIndex: "index",
+              key: "index",
+              render: (_, __, index) =>
+                (currentPage - 1) * pageSize + index + 1,
+              width: "5%",
+            },
+            {
+              title: "이름",
+              dataIndex: "name",
+              key: "name",
+              render: (text) =>
+                isSearching ? highlightText(text, searchQuery) : text,
+            },
+            {
+              title: "연락처",
+              dataIndex: "phone",
+              key: "phone",
+              render: (text) =>
+                isSearching
+                  ? highlightText(formatPhoneNumber(text), searchQuery)
+                  : formatPhoneNumber(text),
+            },
+            {
+              title: "주소",
+              dataIndex: "address",
+              key: "address",
+              render: (text) =>
+                isSearching ? highlightText(text, searchQuery) : text,
+            },
+          ]}
           dataSource={isSearching ? searchData : displayData}
           loading={loading}
           pagination={{
             current: currentPage,
             pageSize,
-            total: isSearching ? searchData.length : totalCustomers,
+            total: totalCustomers,
             onChange: (page) => setCurrentPage(page),
           }}
-          className="mb-4"
         />
       )}
 
-      {!isMobile && (
-        <Modal
-          title={`${selectedCustomer?.name}님의 정보`}
-          open={isModalVisible}
-          onCancel={handleModalClose}
-          footer={null}
-        >
-          <Tabs defaultActiveKey="1">
-            <TabPane tab="기본 정보" key="1">
-              <p>기본 정보 내용</p>
-            </TabPane>
-            <TabPane tab="시술 이력" key="2">
-              <p>시술 이력 내용</p>
-            </TabPane>
-            <TabPane tab="고객 선호도" key="3">
-              <p>고객 선호도 내용</p>
-            </TabPane>
-            <TabPane tab="상담 기록" key="4">
-              <p>상담 기록 내용</p>
-            </TabPane>
-          </Tabs>
-        </Modal>
-      )}
+      <Modal
+        title={`${selectedCustomer?.name}님의 정보`}
+        open={isModalVisible}
+        onCancel={handleModalClose}
+        footer={null}
+      >
+        <Tabs defaultActiveKey="1">
+          <TabPane tab="기본 정보" key="1">
+            <p>기본 정보 내용</p>
+          </TabPane>
+          <TabPane tab="시술 이력" key="2">
+            <p>시술 이력 내용</p>
+          </TabPane>
+        </Tabs>
+      </Modal>
     </div>
   );
 };

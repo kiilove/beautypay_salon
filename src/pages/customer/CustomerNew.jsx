@@ -26,7 +26,7 @@ const CustomerNew = () => {
   const { addData, loading, error } = useFirestoreAddData();
 
   // 새 고객 추가 로직
-  const onFinish = (values) => {
+  const onFinish = async (values) => {
     const formattedValues = {
       ...values,
       name: encryptData(values.name) || "",
@@ -43,14 +43,22 @@ const CustomerNew = () => {
     };
 
     // 고객 데이터를 Firestore에 저장
-    addData("customers", formattedValues, (response) => {
-      if (response) {
-        message.success("새 고객이 추가되었습니다.");
-        navigate("/customer-management/customer-list");
-      } else {
-        message.error("고객 추가 실패!");
-      }
-    });
+    try {
+      await addData(
+        "salons/Oc2MGp4nUw4q0nxHmWdM/customers",
+        formattedValues,
+        (response) => {
+          if (response) {
+            message.success("새 고객이 추가되었습니다.");
+            //navigate("/customer-management/customer-list");
+          } else {
+            message.error("고객 추가 실패!");
+          }
+        }
+      );
+    } catch (error) {
+      message.error("고객 추가 실패!");
+    }
   };
 
   // 사진 업로드 처리

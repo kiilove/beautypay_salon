@@ -156,13 +156,17 @@ const CustomerGenerator = () => {
         createdAt: customer.createdAt,
       };
 
-      addData("customers", dataToSave, (response) => {
-        if (response) {
-          message.success("데이터가 저장되었습니다.");
-        } else {
-          message.error("저장에 실패했습니다.");
+      addData(
+        "salons/Oc2MGp4nUw4q0nxHmWdM/customers",
+        dataToSave,
+        (response) => {
+          if (response) {
+            message.success("데이터가 저장되었습니다.");
+          } else {
+            message.error("저장에 실패했습니다.");
+          }
         }
-      });
+      );
     });
 
     setSelectedKeys([]);

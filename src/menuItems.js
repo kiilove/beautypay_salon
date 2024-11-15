@@ -3,6 +3,7 @@ import {
   CalendarOutlined,
   PieChartOutlined,
   SettingOutlined,
+  DatabaseOutlined,
 } from "@ant-design/icons";
 import React from "react";
 
@@ -12,6 +13,29 @@ const menuItems = [
     icon: <UserOutlined />,
     label: "BeautyPay Salon",
     allowedGroups: ["admin", "staff", "user"],
+  },
+  {
+    key: "/salon-management",
+    icon: <DatabaseOutlined />,
+    label: "마이데이터",
+    allowedGroups: ["admin"],
+    children: [
+      {
+        key: "/salon-management/salon-info", // 회사 정보
+        label: "회사 정보",
+        allowedGroups: ["admin"],
+      },
+      {
+        key: "/salon-management/staff-management", // 직원 관리
+        label: "직원 관리",
+        allowedGroups: ["admin"],
+      },
+      {
+        key: "/salon-management/staff-new", // 새 직원 추가
+        label: "새 직원 추가",
+        allowedGroups: ["admin"],
+      },
+    ],
   },
   {
     key: "/customer-management",
@@ -34,33 +58,9 @@ const menuItems = [
         label: "고객 리스트",
         allowedGroups: ["admin", "staff", "user"],
       },
-      {
-        key: "/customer-management/basic-info",
-        label: "고객 정보",
-        allowedGroups: ["admin", "staff", "user"],
-      },
-      {
-        key: "/customer-management/treatment-history",
-        label: "시술 이력",
-        allowedGroups: ["admin", "staff"],
-      },
-      {
-        key: "/customer-management/preferences",
-        label: "고객 취향/선호도",
-        allowedGroups: ["admin", "staff"],
-      },
-      {
-        key: "/customer-management/consultation",
-        label: "상담 기록",
-        allowedGroups: ["admin", "staff"],
-      },
-      {
-        key: "/customer-management/membership-points",
-        label: "멤버십/포인트 관리",
-        allowedGroups: ["admin"],
-      },
     ],
   },
+
   {
     key: "/reservation-management",
     icon: <CalendarOutlined />,
