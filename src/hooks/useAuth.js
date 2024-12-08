@@ -5,10 +5,13 @@ import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   signOut,
+  GoogleAuthProvider,
+  signInWithPopup,
 } from "firebase/auth";
-import { auth } from "../services/firebase";
+import { auth, db } from "../services/firebase";
 import { useFirestoreQuery } from "./useFirestore";
-import { where } from "firebase/firestore";
+import { doc, setDoc, where } from "firebase/firestore";
+import dayjs from "dayjs";
 
 const useFirebaseAuth = () => {
   const [currentUser, setCurrentUser] = useState(null);
@@ -94,6 +97,46 @@ const useFirebaseAuth = () => {
     return signOut(auth);
   };
 
+  const signUpWithGoogle = async (callback) => {
+    setAuthError(null);
+    const provider = new GoogleAuthProvider();
+    try {
+      const result = await signInWithPopup(auth, provider);
+      const user = result.user;
+
+      // 새로운 사용자만 Firestore에 저장
+      const userDoc = doc(db, "members", user.uid);
+      await setDoc(userDoc, {
+        email: user.email,
+        displayName: user.displayName,
+        createdAt: dayjs().format("YYYY-MM-DD HH:mm:ss"),
+      });
+
+      if (callback) {
+        callback(user);
+      }
+    } catch (error) {
+      setAuthError("Google 회원가입 중 오류가 발생했습니다.");
+      console.error(error);
+    }
+  };
+
+  const signInWithGoogle = async (callback) => {
+    setAuthError(null);
+    const provider = new GoogleAuthProvider();
+    try {
+      const result = await signInWithPopup(auth, provider);
+      const user = result.user;
+
+      if (callback) {
+        callback(user);
+      }
+    } catch (error) {
+      setAuthError("Google 로그인 중 오류가 발생했습니다.");
+      console.error(error);
+    }
+  };
+
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged((user) => {
       setCurrentUser(user);
@@ -109,6 +152,8 @@ const useFirebaseAuth = () => {
     authError,
     checkExistID,
     signUpWithID,
+    signUpWithGoogle,
+    signInWithGoogle,
   };
 };
 

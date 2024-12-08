@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import useFirebaseAuth from "../hooks/useAuth";
 
 const Signup = () => {
-  const { signUpWithEmail, signInWithGoogle, authError } = useFirebaseAuth();
+  const { signUpWithEmail, signUpWithGoogle, authError } = useFirebaseAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
@@ -43,7 +43,7 @@ const Signup = () => {
         </div>
         <button type="submit">회원가입</button>
       </form>
-      <button onClick={signInWithGoogle}>Google 계정으로 회원가입</button>
+      <button onClick={signUpWithGoogle}>Google 계정으로 회원가입</button>
       {authError && <p style={{ color: "red" }}>{authError}</p>}
     </div>
   );
