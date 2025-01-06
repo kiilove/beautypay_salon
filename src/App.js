@@ -11,7 +11,8 @@ import { ThemeProvider, useTheme } from "./context/ThemeContext";
 import { DeviceProvider } from "./context/DeviceContext";
 import { AuthProvider } from "./context/AuthContext";
 import useFirebaseAuth from "./hooks/useAuth";
-import { CircleLoader } from "react-spinners";
+import { CircleLoader, PropagateLoader } from "react-spinners";
+import Signup from "./pages/Signup";
 
 const ProtectedRoute = ({ children }) => {
   const { currentUser } = useFirebaseAuth();
@@ -23,7 +24,7 @@ const ProtectedRoute = ({ children }) => {
       setIsCheckingAuth(false);
       setIsAuthenticated(!!currentUser); // currentUser가 존재하면 인증 완료
     }, 2000); // 최대 2초 대기
-
+    console.log(currentUser);
     return () => clearTimeout(timeout); // 컴포넌트 언마운트 시 타이머 정리
   }, [currentUser]);
 
@@ -31,7 +32,7 @@ const ProtectedRoute = ({ children }) => {
     // Auth 상태 확인 중 로딩 표시
     return (
       <div className="w-full h-screen flex bg-white justify-center items-center">
-        <CircleLoader color="#fa8000" loading size={80} speedMultiplier={0.6} />
+        <PropagateLoader color="#fa8000" loading speedMultiplier={0.8} />
       </div>
     );
   }
@@ -54,6 +55,8 @@ const AppContent = () => {
         <div className="min-h-screen bg-white text-black dark:bg-gray-900 dark:text-white">
           <Routes>
             <Route path="/login" element={<Login />} />
+            <Route path="/signup" element={<Signup />} />
+
             <Route
               path="/"
               element={

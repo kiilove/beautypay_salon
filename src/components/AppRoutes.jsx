@@ -18,7 +18,7 @@ import AdminPage from "../pages/AdminPage";
 import CustomerNew from "../pages/customer/CustomerNew";
 import CustomerGenerator from "../pages/customer/CustomerGenerator";
 import SalonInfo from "../pages/salon/SalonInfo";
-import Signup from "../pages/Signup";
+import Signup from "../pages/SignupOld";
 import Login from "../pages/Login";
 import StaffNew from "../pages/staff/StaffNew";
 

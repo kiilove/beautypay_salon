@@ -1,11 +1,12 @@
 import React, { useState } from "react";
-import { Layout, Menu, Button, Drawer } from "antd";
+import { Layout, Menu, Button, Drawer, Avatar, Popconfirm } from "antd";
 import { MenuOutlined } from "@ant-design/icons";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useTheme } from "../context/ThemeContext";
 import { useDevice } from "../context/DeviceContext";
 import { useAuth } from "../context/AuthContext"; // useAuth 가져오기
 import menuItems from "../menuItems";
+import useFirebaseAuth from "../hooks/useAuth";
 
 const { Header: AntHeader } = Layout;
 
@@ -13,9 +14,13 @@ const Header = () => {
   const { isDarkTheme, toggleTheme } = useTheme();
   const { isMobile } = useDevice();
   const { userGroup } = useAuth(); // userGroup 가져오기
+  const [userEmail, setUserEmail] = useState(
+    sessionStorage.getItem("userEmail")
+  );
   const navigate = useNavigate();
   const location = useLocation();
   const [drawerVisible, setDrawerVisible] = useState(false);
+  const { logOut } = useFirebaseAuth();
 
   // 사용자 그룹에 맞는 메뉴 필터링
   const filteredMenuItems = menuItems
@@ -32,6 +37,8 @@ const Header = () => {
 
   // Drawer 열기/닫기
   const toggleDrawer = () => setDrawerVisible(!drawerVisible);
+
+  const handleLogout = () => {};
 
   return (
     <AntHeader
@@ -58,22 +65,42 @@ const Header = () => {
                 selectedKeys={[location.pathname]}
                 items={filteredMenuItems}
               />
+              <Popconfirm
+                title="로그아웃 하시겠습니까?"
+                onConfirm={() => logOut()}
+                okText="예"
+                cancelText="아니오"
+              >
+                <Button type="default" block style={{ marginTop: "20px" }}>
+                  로그아웃
+                </Button>
+              </Popconfirm>
             </Drawer>
           </>
         ) : (
-          <Menu
-            theme={isDarkTheme ? "dark" : "light"}
-            mode="horizontal"
-            onClick={({ key }) => navigate(key)}
-            selectedKeys={[location.pathname]}
-            items={filteredMenuItems}
-            className="bg-transparent flex-1"
-            style={{ fontSize: "16px", fontWeight: 500 }}
-          />
+          <div className="flex items-center justify-between w-full">
+            <Menu
+              theme={isDarkTheme ? "dark" : "light"}
+              mode="horizontal"
+              onClick={({ key }) => navigate(key)}
+              selectedKeys={[location.pathname]}
+              items={filteredMenuItems}
+              className="bg-transparent flex-1"
+              style={{ fontSize: "16px", fontWeight: 500 }}
+            />
+            <p className="text-gray-200">{userEmail}</p>
+            <Popconfirm
+              title="로그아웃 하시겠습니까?"
+              onConfirm={() => logOut()}
+              okText="예"
+              cancelText="아니오"
+            >
+              <Button type="default" style={{ marginLeft: "20px" }}>
+                로그아웃
+              </Button>
+            </Popconfirm>
+          </div>
         )}
-        <Button onClick={toggleTheme} type="primary">
-          {isDarkTheme ? "Light Theme" : "Dark Theme"}
-        </Button>
       </div>
     </AntHeader>
   );
