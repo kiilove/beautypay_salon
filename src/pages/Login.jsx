@@ -23,6 +23,23 @@ const Login = () => {
     }
   };
 
+  const handleGoogleLogin = async () => {
+    try {
+      // 강제 2초 딜레이 추가
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+
+      const user = await signInWithGoogle(); // 팝업 대기
+      if (user) {
+        message.success("Google 로그인 성공!", 1, () => {
+          navigate("/");
+        });
+      }
+    } catch (error) {
+      console.error("Google 로그인 오류:", error);
+      message.error("Google 로그인에 실패했습니다.");
+    }
+  };
+
   return (
     <div className="flex w-full h-screen justify-center items-center">
       <div
@@ -69,11 +86,7 @@ const Login = () => {
             </Button>
           </Form.Item>
           <Form.Item>
-            <Button
-              type="default"
-              onClick={() => signInWithGoogle((user) => navigate("/"))}
-              block
-            >
+            <Button type="default" onClick={handleGoogleLogin} block>
               Google 계정으로 로그인
             </Button>
           </Form.Item>

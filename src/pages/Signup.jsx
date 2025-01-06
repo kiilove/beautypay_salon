@@ -40,6 +40,20 @@ const Signup = () => {
     }
   };
 
+  const handleGoogleSignUp = async () => {
+    try {
+      const user = await signUpWithGoogle(); // 팝업 완료를 기다림
+      if (user) {
+        message.success("Google 로그인 성공!", 1, () => {
+          navigate("/");
+        });
+      }
+    } catch (error) {
+      console.error("Google 로그인 오류:", error);
+      message.error("Google 로그인에 실패했습니다.");
+    }
+  };
+
   return (
     <div className="flex w-full h-screen justify-center items-center">
       <div
@@ -110,11 +124,7 @@ const Signup = () => {
             </Button>
           </Form.Item>
           <Form.Item>
-            <Button
-              type="default"
-              onClick={() => signUpWithGoogle((user) => navigate("/"))}
-              block
-            >
+            <Button type="default" onClick={handleGoogleSignUp} block>
               Google 계정으로 회원가입
             </Button>
           </Form.Item>
